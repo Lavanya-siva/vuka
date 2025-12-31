@@ -10,45 +10,54 @@ use Illuminate\Support\Facades\Hash;
 class OtpController extends Controller
 {
     public function verifyOtp(Request $request)
-    {
-        $request->validate([
-            'user_id' => 'required',
-            'otp_code' => 'required|digits:6',
-        ]);
+{
+    $request->validate([
+        'user_id' => 'required',
+        'otp_code' => 'required|digits:6',
+    ]);
 
-        $otpRecord = OtpVerification::where('user_id', $request->user_id)
-            ->where('otp_code', $request->otp_code)
-            ->first();
+    $maxChance = 3;
 
-        // If OTP is invalid
-        if (!$otpRecord) {
-            // get latest OTP for this user
-            $latestOtp = OtpVerification::where('user_id', $request->user_id)
-                ->latest()
-                ->first();
-                
-            if ($latestOtp) {
-                $latestOtp->increment('attempts'); //increment otp
-            }
-            return response()->json(['message' => 'Invalid OTP'], 422);
-        }
-        if ($otpRecord->expires_at < now()) {
-            return response()->json(['message' => 'OTP expired'], 422);
-        }
+    // get latest OTP for this user
+    $otpRecord = OtpVerification::where('user_id', $request->user_id)
+        ->latest()
+        ->first();
 
-        // Mark OTP as verified
-        $otpRecord->verified = true;
-        $otpRecord->attempts = 0; // reset attempts on success
-        $otpRecord->save();
-
-        // Update user registration status
-        $otpRecord->user->registration_status = 'otp_verified';
-        $otpRecord->user->save();
-
-        return response()->json([
-            'message' => 'OTP verified successfully'
-        ]);
+    if (!$otpRecord) {
+        return response()->json(['message' => 'No OTP found. Please request a new one.'], 404);
     }
+
+    // Check max attempts
+    if ($otpRecord->attempts >= $maxChance) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Too many attempts. Please try again later.'
+        ], 429); 
+    }
+
+    // Check expiration
+    if ($otpRecord->expires_at < now()) {
+        return response()->json(['message' => 'OTP expired'], 422);
+    }
+
+    // Check OTP
+    if ($otpRecord->otp_code != $request->otp_code) {
+        $otpRecord->increment('attempts'); // increment attempts on wrong OTP
+        return response()->json(['message' => 'Invalid OTP'], 422);
+    }
+
+    $otpRecord->verified = true;
+    $otpRecord->attempts = 0; 
+    $otpRecord->save();
+
+    $otpRecord->user->registration_status = 'otp_verified';
+    $otpRecord->user->save();
+
+    return response()->json([
+        'success' => true,
+        'message' => 'OTP verified successfully'
+    ], 200);
+}
 
     public function resendOtp(Request $request)
     {

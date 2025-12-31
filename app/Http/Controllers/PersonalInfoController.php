@@ -8,18 +8,7 @@ use App\Models\PersonalInfo;
 
 class PersonalInfoController extends Controller
 {
-    public function getPersonalInfo(Request $request)
-    {
-        $user_id = $request->query('user_id');
-        $user = User::find($user_id);
-
-        if (!$user) {
-            return response()->json(['message' => 'User not found'], 404);
-        }
-
-        return response()->json(['user' => $user]);
-    }
-
+    
     public function savePersonalInfo(Request $request)
     {
         $user = User::find($request->user_id);
