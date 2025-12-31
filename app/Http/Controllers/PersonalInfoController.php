@@ -5,35 +5,35 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\User;
 use App\Models\PersonalInfo;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\ValidationException;
 
 class PersonalInfoController extends Controller
 {
-    
+     use AuthorizesRequests;
     public function savePersonalInfo(Request $request)
-    {
-        $user = User::find($request->user_id);
-
-        if (!$user) {
-            return response()->json(['message' => 'User not found.'], 404);
-        }
-
+    {     
+       /*
         //Gate for curr user modify other-admin?
-       $authUser = $request->user();   // authenticated user
-       $targetUser = User::find($request->user_id);
-       if (Gate::forUser($authUser)->denies('can-save-personal-info', $targetUser)) {
+       $Authuser = $request->user();   // current user from token
+       if (Gate::forUser($user)->denies('can-save-personal-info', $Authuser)) {
        return response()->json(['message' => 'Unauthorized user or verify otp'], 403);
        } // role based cond-admin can access
 
         // curr user-authorized?
-       //Gate::authorize('can-save-personal-info', $user);
-       
-
+      // Gate::authorize('can-save-personal-info', $user);
+       */
+        $user = $request->user(); 
+         if (Gate::denies('valid-proof-type', $request->proof_type)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Invalid proof type. Allowed types: National ID, Alien ID, Passport ID'
+            ], 403);
+        }
         try {
         $request->validate([
-        'user_id' => 'required',
-        'proof_type' => 'required|in:National ID,Alien ID,Passport ID',
+        'proof_type' => 'required',
         'id_number' => 'required|string|unique:personal_infos,id_number',
         'kra_pin' => 'required|string|unique:personal_infos,kra_pin',
         'date_of_birth' => 'required|date',
@@ -49,9 +49,9 @@ class PersonalInfoController extends Controller
             'errors' => $e->errors()
             ], 422);
         }
-
+        $user = $request->user();
         $personalInfo = PersonalInfo::create([
-            'user_id' => $request->user_id,
+            'user_id' => $user->id,
             'proof_type' => $request->proof_type,
             'id_number' => $request->id_number,
             'kra_pin' => $request->kra_pin,
@@ -72,4 +72,5 @@ class PersonalInfoController extends Controller
             'personal_info' => $personalInfo
         ]);
     }
+
 }

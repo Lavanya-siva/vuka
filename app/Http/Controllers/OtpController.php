@@ -7,14 +7,17 @@ use App\Models\User;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
+use Illuminate\Support\Facades\Gate;
 
-class OtpController extends Controller
-{
+
+
+class OtpController extends Controller{
+    use AuthorizesRequests;
     public function verifyOtp(Request $request)
 {
     try{
         $request->validate([
-        'user_id' => 'required',
         'otp_code' => 'required|digits:6',
     ]);
 } catch(ValidationException $e){
@@ -25,9 +28,9 @@ class OtpController extends Controller
 }
 
     $maxChance = 3;
-
+    $user = $request->user(); // current user 
     // get latest OTP for this user
-    $otpRecord = OtpVerification::where('user_id', $request->user_id)
+    $otpRecord = OtpVerification::where('user_id', $user->id)
         ->latest()
         ->first();
 
@@ -71,7 +74,6 @@ class OtpController extends Controller
     {
         try{
             $request->validate([
-            'user_id'=>'required',
             'email' => 'required|email',
             'password' => 'required|string'
         ]);
@@ -96,17 +98,18 @@ class OtpController extends Controller
                 'message' => 'OTP already verified'
             ], 400);
         }
-
         //generate new otp
         $otp = rand(100000, 999999);
-        $otpRecord = OtpVerification::where('user_id', $request->user_id)
-            ->first();
-
-        //  save new otp in db
-        $otpRecord->otp_code = $otp;
-        $otpRecord->expires_at = now()->addMinutes(10);
-        $otpRecord->save();
-
+        $otpRecord = OtpVerification::updateOrCreate(
+        ['user_id' => $user->id],
+        [
+        'otp_code' => $otp,
+        'sent_at'=>now(),
+        'expires_at' => now()->addMinutes(10),
+        'attempts' => 0,
+        'verified' => false
+        ]
+        );
         // send otp
          Mail::send('emails.otp-verification', [
         'user' => $user,

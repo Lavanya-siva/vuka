@@ -16,9 +16,8 @@ Route::prefix('user')->group(function () {
 
 Route::middleware('auth:sanctum')->prefix('user')->group(function () {
     Route::post('verify-otp', [OtpController::class, 'verifyOtp']);
-    Route::post('personal-info', [PersonalInfoController::class, 'savePersonalInfo']);
     Route::post('resend-otp', [OtpController::class, 'resendOtp']);
-    Route::post('/logout', [AuthController::class, 'logout']);
+
     // Email verification routes
     Route::get('email/verify', function (Request $request) {
         return response()->json([
@@ -53,3 +52,7 @@ Route::fallback(function () {
     ], 404);
 });
 
+Route::prefix('user')->middleware(['auth:sanctum', 'otp.verified'])->group(function () {
+    Route::post('personal-info', [PersonalInfoController::class, 'savePersonalInfo']);
+    // Add other protected user routes here if needed
+});

@@ -22,6 +22,7 @@ class CreateAccountController extends Controller
         'email' => 'required|email|unique:users,email',
         'phone_no' => 'required|string',
         'password' => 'required|min:8',
+        'terms_cond' => 'required|in:1',
     ]);
     } catch(ValidationException $e){
        return response()->json([
@@ -37,7 +38,7 @@ class CreateAccountController extends Controller
         'email' => $request->email,
         'phone_no' => $request->phone_no,
         'password' => Hash::make($request->password),
-        'terms_cond' => true,
+        'terms_cond' => $request->terms_cond,
     ]);
 
     $otp = rand(100000, 999999);
@@ -56,7 +57,6 @@ class CreateAccountController extends Controller
     return response()->json([
         'success' => true,
         'message' => 'Account created. Verification email sent.',
-        'user_id' => $user->id,
         'access_token' => $token,
         'token_type' => 'Bearer'
     ], 201);
