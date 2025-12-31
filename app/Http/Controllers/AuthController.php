@@ -5,15 +5,24 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use App\Models\User;
+use Illuminate\Validation\ValidationException; 
 
 class AuthController extends Controller
 {
     public function login(Request $request)
     {
-        $request->validate([
+        try{
+            $request->validate([
             'email' => 'required|email',
             'password' => 'required',
         ]);
+    } catch(ValidationException $e){
+        return response()->json([
+        'success' => false,
+        'errors' => $e->errors()
+    ], 422);
+
+    }
 
         $user = User::where('email', $request->email)->first();
 

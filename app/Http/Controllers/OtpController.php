@@ -6,15 +6,23 @@ use App\Models\OtpVerification;
 use App\Models\User;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\ValidationException;
 
 class OtpController extends Controller
 {
     public function verifyOtp(Request $request)
 {
-    $request->validate([
+    try{
+        $request->validate([
         'user_id' => 'required',
         'otp_code' => 'required|digits:6',
     ]);
+} catch(ValidationException $e){
+     return response()->json([
+        'success' => false,
+        'errors' => $e->errors()
+    ], 422);
+}
 
     $maxChance = 3;
 
@@ -61,11 +69,18 @@ class OtpController extends Controller
 
     public function resendOtp(Request $request)
     {
-        $request->validate([
+        try{
+            $request->validate([
             'user_id'=>'required',
             'email' => 'required|email',
             'password' => 'required|string'
         ]);
+    } catch(ValidationException $e){
+        return response()->json([
+        'success' => false,
+        'errors' => $e->errors()
+    ], 422);
+    }
 
         $user = User::where('email', $request->email)->first();
 
